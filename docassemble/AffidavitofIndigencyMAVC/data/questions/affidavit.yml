@@ -1,6 +1,6 @@
 ---
 include:
-  - docassemble.gbls:basic-questions-gbls.yml
+  - docassemble.MAVirtualCourt:basic-questions.yml
 ---
 modules:
   - docassemble.income.income
@@ -36,7 +36,10 @@ id: question order
 mandatory: True
 code: |
   multi_user = True # Allow sharing interview
+  basic_questions_intro_screen
   intro
+  user_ask_role
+  case_name
   public_assistance_kinds
   if not public_assistance_kinds.any_true():
     has_household_members
@@ -47,14 +50,39 @@ code: |
   fees['E-filing'].waive
   fees['Costs of an expert witness'].waive
   fees_interstitial
-  client.address.address
+  users[0].address.address
   tried_geolocating
-  local_housing_court
+  # local_housing_court
+  all_matches
+  filtered
+  courts[0]
+  dont_know_docket_number
   set_empty_fees
-  final_review
-  if send_email_copy:
-    sent_email
-  ending
+  # trigger other computed values
+  filing_fees_amount
+  annually
+  preview
+  
+  basic_questions_signature_flow  
+  download
+---
+code: |
+  case_name = str(plaintiffs) + ' v ' + str(defendants)
+---
+code: |
+  all_matches = macourts.matching_courts(users[0].address, court_types=allowed_courts)
+  filtered = combined_locations(all_matches)
+---
+code: |
+  allowed_courts = [
+      "Boston Municipal Court",
+      "District Court",
+      "Superior Court",
+      "Housing Court",
+      "Probate and Family Court",
+      "Juvenile Court",
+      "Land Court",
+      ]
 ---
 code: |
   for fee in fees:
@@ -79,14 +107,6 @@ subquestion: |
   In some cases the waiver is automatic. In other cases
   we may need to ask you for detailed information about your
   income and expenses.
-  
-  If you were sent this form by an attorney or advocate,
-  you can email the signed form to them at the end of the interview.
-  They may be able to help you file it with the court.
-  
-  This interview **does not file your form for you**. You can download and
-  [e-file it](http://www.efilema.com/) or you may have an attorney working with
-  you who plans to do the e-filing on your behalf.
 continue button field: intro
 ---
 question: |
@@ -284,39 +304,117 @@ question: |
 subquestion: |
   Enter your name and address below.
 fields:
-  - Your full name: client.name.first
-    default: ${client}
-  - Street address: client.address.address
+  - Your full name: users[0].name.first
+    #default: ${users[0]}
+  - Street address: users[0].address.address
     address autocomplete: True
-  - Unit/apartment: client.address.unit
+  - Unit/apartment: users[0].address.unit
     required: False
-  - City: client.address.city
-  - State: client.address.state
+  - City: users[0].address.city
+  - State: users[0].address.state
     code: states_list()
-  - Zip: client.address.zip    
-  - Email: client.email
+  - Zip: users[0].address.zip    
+  - Email: users[0].email
     datatype: email
     required: False
 ---
 code: |
-  client.address.geolocate()
+  users[0].address.geolocate()
   tried_geolocating = True
----
-code: |
-  local_housing_court = macourts.matching_housing_court(client.address)
----
+# ---
+# code: |
+#   local_housing_court = macourts.matching_housing_court(client.address)
+---      
+id: choose a court
 question: |
-  Your court and case number
+  Which court are you filing in?
 subquestion: |
-  We have tried to guess  the name of your court based on your address.
-  Look closely to make sure this is the right court name.
+  % if len(all_matches) > 0:
+  Below is a list of the court(s) that serve the
+  address you gave us, ${users[0].address.on_one_line(include_unit=True)}.  
+  % else:
+  We didn't find any matching court(s) that serve
+  ${users[0].address.on_one_line()}.
+  % endif
+
+  Choose a court from the list below.
 fields:
-  - What court is your case being heard in?: court
+  - no label: courts[0]
+    datatype: object_radio
+    choices: all_matches
+    none of the above: True
+    disable others: True
+    object labeler: |
+      lambda y: '**' + str(y) +' (' + y.address.city + ')**' + '[BR]' + y.address.on_one_line() + '[BR]' + y.description
+  - note: |
+      Does the list above look wrong? If you think you should file in a
+      court we didn't list, choose from the full list below.
+    show if: 
+      code: |
+        len(all_matches)
+  - no label: courts[0]
     datatype: object
-    default: local_housing_court
-    choices: macourts
-  - Docket number or case number (if known): docket_number
-    required: False
+    object labeler: |
+      lambda y: (str(y) +' (' + y.address.city + ')') if y.address.city not in str(y) else str(y)
+    choices: macourts    
+help: 
+  label: |
+    How do I pick a court?
+  content: |
+    If you are responding to a case someone else filed, you may not
+    get to choose your court. But if you are starting a new case, you have
+    a choice. How do you know which court to choose?
+  
+    Massachusetts has 7 trial court departments:
+    
+    * District Court
+    * Boston Municipal Court (BMC)
+    * Superior Court
+    * Housing Court
+    * Probate and Family Court
+    * Juvenile Court
+    * Land Court
+    
+    The District Court, BMC, and Superior Court are all courts that can hear any
+    type of case. The Land Court, Probate and Family, Juvenile Court, and
+    Housing Court are all **specialist** courts that hear one kind of case. They
+    have may have judges with special training as well as special resources
+    available.
+    
+    For example, the Housing Court has trained mediators, a special program for
+    tenants with disabilities, and legal help available on-site on the day that
+    eviction hearings are held.
+    
+    Different courts can make different kinds of decisions. Not every court can
+    give you every kind of help. For example, you cannot file a housing
+    discrimination case in the District Court. You can only ask for visitation
+    in the Probate and Family Court.
+    
+    Depending on where you live, different courts may be further or closer to
+    your address. There are about 100 district courts all over the state, but
+    each county has only one or a few Superior Courts or specialty courts.
+    
+    Choosing a court means thinking about what kind of help you need, as well as
+    which court you can get transportation to on the day of your hearing.
+    
+    Only you know the right choice.
+    
+    You can also view the court selection guidance at
+    [mass.gov](https://www.mass.gov/courthouse-locator).
+
+# ---
+# question: |
+#   Your court and case number
+# subquestion: |
+#   We have tried to guess  the name of your court based on your address.
+#   Look closely to make sure this is the right court name.
+# fields:
+#   - What court is your case being heard in?: court
+#     datatype: object
+#     default: local_housing_court
+#     choices: macourts
+#   - Docket number or case number (if known): docket_number
+#     required: False
 ---
 code: |
   if url_args.get('recipient_email'):
@@ -332,43 +430,78 @@ code: |
     have_email_in_url_args = False
     recipient_email = ""
 ---
-continue button field: final_review
+continue button field: preview
 question: |
-  Summary
+  Preview of your document
 subquestion: |
-  Here's the document you just filled out:
-  ${affidavitofindigency}
-fields:
-  - Email a copy of this signed affidavit: send_email_copy
-    datatype: yesnowide
-    default: ${have_email_in_url_args}
-  - Email address: email_recipient
-    datatype: email
-    show if: send_email_copy
-    default: ${recipient_email}
+  Click below to open a preview of your document in a new
+  window. On the next screen, you'll have a chance to sign it.
+
+  ${affidavitofindigency_preview}
+
+  ${action_button_html(url_action('review_all_sections'), icon='edit', label=word("Make Changes"), size="sm")}
+  
 ---
-event: ending
+event: review_all_sections
 question: |
-  All set.
+  Review your form
 subquestion: |
-  % if send_email:
-  Okay, we sent your document to ${email_recipient}
+  % if defined('form_delivery_complete'):
+  **Warning: your form has already been delivered.** Any changes you make
+  will _not_ be sent to the court.
+
   % endif
-  
-  You can still download a copy of your document [here](${affidavitofindigency.url_for()}).
-  
-  This interview **does not file your form for you**. You can download and
-  [e-file it](http://www.efilema.com/) or you may have an attorney working with
-  you who plans to do the e-filing on your behalf.  
-  
-  If you need to make any changes, click an edit button below:
-  
+
   * [Edit "standard" waiver requests](${url_action("fees['E-filing'].waive")})
   * [Edit "extra fees and costs"](${url_action("fees['transcript'].amount")})
-  * [Edit name](${url_action("client.name.first")})
+  * [Edit name](${url_action("users[0].name.first")})
   * [Edit public benefits](${url_action("public_assistance_kinds")})
   * [Edit income](${url_action("hh_income.value")})
   * [Edit inability to pay](${url_action("can_afford")})
+---
+decoration: file-download
+question: |
+  % if not defined('email_success') or not email_success:
+  Review, Download, and Send Form
+  % else:
+  Form delivered
+  % endif
+subquestion: |
+  % if not defined('email_success') or not email_success:
+  Thank you ${users[0]}. Your form is ready to send to the court. **It is not
+  delivered until you complete the delivery process below.**
+
+  1. Click the preview image below to open the form in a new window. Correct any errors using the "Make changes" button below.
+  1. Download and save or print a copy of this form for your 
+  records.
+  1. Click the "Submit to ${courts[0]}" button to send it to the court. 
+  1. You will have a chance to add instructions to the clerk and see the cover page before final delivery.
+  % else:
+  If you do not hear from the court in 1 business day, call the Trial Court’s
+  Emergency HelpLine 833-91-COURT (833-912-6878).
+  
+  The Emergency HelpLine is open:  
+  8:30am - 4:30pm,   
+  Monday - Friday.
+  % endif
+  
+  ${ form_to_file_no_cover }  
+  
+  ${action_button_html(url_action('review_all_sections'), icon='edit', label=word("Make changes"))}
+  
+  % if not defined('email_success') or not email_success:
+    ${ action_button_html( url_action('form_delivery_complete'), id_tag="submitToCourt", label="Submit to " + str(courts[0].name), icon=send_icon, size="md", color="primary")}
+    
+  Or download/email below:
+  % else:
+    Your email has already been delivered to ${courts[0]}
+    
+  [:file-download: Download with cover page](${final_form_to_file.url_for()})    
+  % endif
+progress: 100
+attachment code: form_to_file_no_cover
+section: download
+event: download
 ---
 code: |
   need_income = not public_assistance_kinds.any_true()
@@ -389,14 +522,16 @@ code: |
 reconsider: True
 attachment:
   - name: affidavitofindigency
-    variable name: affidavitofindigency
+    variable name: form_to_file_no_cover
     filename: affidavitofindigency
     pdf template file: affidavitofindigency.pdf
+    editable: False
+    skip undefined: True
     fields:
-      - "court": ${court}
-      - "docket_number": ${showifdef('docket_number')}
-      - "client": ${client}
-      - "client_address": ${client.address.on_one_line()}
+      - "court": ${courts[0]}
+      - "docket_number": ${case_name + ' ' + docket_numbers[0]}
+      - "user_name_full": ${users[0]}
+      - "user_address_on_one_line": ${users[0].address.on_one_line()}
       - "gets_public_benefits": ${yesno(public_assistance_kinds.any_true())}
       - "Medicaid": ${yesno(public_assistance_kinds['Medicaid'])}
       - "TAFDC": ${yesno(public_assistance_kinds['TAFDC'])}
@@ -442,9 +577,71 @@ attachment:
       # - "cost_other_description_more": fees['Other cost'].waive
       # - "substitution": No
       # - "substitution_description": something
-      - "client_signature": |
-          ${ client.signature }
+      - "user_signature": |
+          ${ users[0].signature }
       - "date_signed": ${format_date(today())}
+---
+---
+reconsider: True
+attachment:
+  - name: affidavitofindigency
+    variable name: affidavitofindigency_preview
+    filename: affidavitofindigency
+    pdf template file: affidavitofindigency.pdf
+    editable: False
+    skip undefined: True
+    fields:
+      - "court": ${courts[0]}
+      - "docket_number": ${case_name + ' ' + docket_numbers[0]}
+      - "user_name_full": ${users[0]}
+      - "user_address_on_one_line": ${users[0].address.on_one_line()}
+      - "gets_public_benefits": ${yesno(public_assistance_kinds.any_true())}
+      - "Medicaid": ${yesno(public_assistance_kinds['Medicaid'])}
+      - "TAFDC": ${yesno(public_assistance_kinds['TAFDC'])}
+      - "SSI": ${yesno(public_assistance_kinds['SSI'])}
+      - "EAEDC": ${yesno(public_assistance_kinds['EAEDC'])}
+      - "VA": ${yesno(public_assistance_kinds['VA Benefits'])}
+      - "below_poverty_level": ${yesno(household_income_qualifies) if need_income else "No"}
+      - "weekly": ${weekly}
+      - "biweekly": ${biweekly}
+      - "monthly": ${monthly}
+      - "annually": ${annually}
+      - "income_amount": ${hh_income.amount(period_to_use=hh_income.period)}
+      - "household_additional_size": ${household_additional_size if need_income else ''}
+      - "household_size": ${household_size if need_income else ''}
+      - "other_income": ${'Included above' if need_income else ''}
+      - "unable_to_pay": ${noyes(can_afford) if (need_income and not household_income_qualifies) else 'No'}
+      - "fee_filing": "Yes"
+      - "fee_filing_amount": ${currency(filing_fees_amount)}
+      - "fee_appeal": ${yesno(fees['Appeal cost'].waive)}
+      - "fee_appeal_amount": ${currency(fees['Appeal cost'].amount) if fees['Appeal cost'].waive and defined("fees['Appeal cost'].amount") else ''}
+      - "fee_service": ${yesno(fees['Service'].waive)}
+      - "fee_service_amount": ${currency(fees['Service'].amount) if fees['Service'].waive and defined("fees['Service'].amount") else ""}
+      - "fee_other": ${yesno(fees['Other'].waive)}
+      - "fee_other_amount": ${currency(fees['Other'].amount) if fees['Other'].waive and defined("fees['Other'].waive") else ""}      
+      - "fee_other_description": ${showifdef("fees['Other'].description")}
+      # - "fee_other_description_more": ''
+      # - "fee_substitution": No
+      # - "fee_substitution_description": something
+      # - "fee_substitution_description_more": something
+      - "fee_expert": ${yesno(fees['Costs of an expert witness'])}
+      - "fee_expert_amount": ${currency(fees['Costs of an expert witness'].amount) if (fees['Costs of an expert witness'] and defined("fees['Costs of an expert witness'].amount")) else ''}
+      - "fee_expert_description": ${showifdef("fees['Costs of an expert witness'].description")}
+      - "fee_deposition": ${yesno(fees['Depositions'].waive)}
+      - "fee_deposition_amount": ${currency(fees['Depositions'].amount) if (fees['Depositions'].waive and defined("fees['Depositions'].amount")) else ''}
+      - "fee_deposition_description": ${showifdef("fees['Costs of an expert witness'].description")}
+      - "fee_recording": ${yesno(fees['recordings'].waive)}
+      - "fee_appeal_bond": ${yesno(fees['Appeal bond'].waive)}
+      - "fee_transcript": ${yesno(fees['transcript'].waive)}
+      - "fee_transcript_amount": ${currency(fees['transcript'].amount) if (fees['transcript'].waive and defined("fees['transcript'].amount")) else ''}
+      - "cost_other": ${yesno(fees['Other cost'].waive)}
+      - "cost_other_description": ${showifdef("fees['Other cost'].description")}
+      - "cost_other_amount": ${currency(fees['Other cost'].amount) if defined("fees['Other cost'].amount") and fees['Other cost'].waive else ''}
+      # - "cost_other_description_more": fees['Other cost'].waive
+      # - "substitution": No
+      # - "substitution_description": something
+      - "date_signed": ${format_date(today())}
+
 ---
 code: |
   if url_args.get('advocate_email'):
@@ -454,17 +651,42 @@ code: |
 ---
 code: |
   if task_not_yet_performed("send email"):
-    if defined('client.email'):
-      send_email(to=email_recipient, cc=client, template=email_affidavit, attachments=affidavitofindigency, task="send email")
+    if defined('users[0].email'):
+      send_email(to=email_recipient, cc=users[0], template=email_affidavit, attachments=affidavitofindigency, task="send email")
     else:
       send_email(to=email_recipient_list, template=email_affidavit, attachments=affidavitofindigency, task="send email")
   sent_email = True
 ---
 template: email_affidavit
 subject: |
-  Signed Affidavit of Indigency for ${client}
+  Signed Affidavit of Indigency for ${users[0]}
 content: |
-  ${client} completed and signed the attached affidavit of indigency
+  ${users[0]} completed and signed the attached affidavit of indigency
   for ${court} on ${today()}.
   
   You can review their answers here ${interview_url()}
+---
+id: docket number
+question: |
+  Docket Number
+subquestion: |
+  If you know the docket number for this case, enter it below
+fields:
+  - I do not know the docket number: dont_know_docket_number
+    datatype: yesno
+  - Docket number: docket_numbers[0]
+    hide if:  dont_know_docket_number
+help:
+  label: |
+    What's a docket number?
+  content: |
+    The docket number is a number that the court assigns to track your case.
+    
+    If this is a **new** case, you may not have one yet. You can leave
+    this blank if you're not sure.
+validation code: |
+  # docket_numbers.there_are_any = not dont_know_docket_number
+  if dont_know_docket_number:
+    docket_numbers[0] = ' '
+  docket_numbers.there_is_another = False
+  
