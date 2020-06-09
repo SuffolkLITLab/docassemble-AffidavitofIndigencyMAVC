@@ -7,10 +7,10 @@ modules:
   - docassemble.MACourts.macourts  
 ---
 objects:
-  - hh_income: Income
+  - hh_income: Job
   - fees: DADict.using(gathered=True, auto_gather=False, object_type=DAObject)
-  - court: MACourt
-  - macourts: MACourtList.using(courts=['housing_courts','bmc','district_courts','superior_courts', 'land_court','juvenile_courts','probate_and_family_courts'])
+#  - court: MACourt
+#  - macourts: MACourtList.using(courts=['housing_courts','bmc','district_courts','superior_courts', 'land_court','juvenile_courts','probate_and_family_courts'])
 ---
 comment: |
   MA Court Poverty Level
@@ -50,7 +50,9 @@ code: |
   fees['E-filing'].waive
   fees['Costs of an expert witness'].waive
   fees_interstitial
+  users[0].name.first
   users[0].address.address
+  users[0].mobile_number
   tried_geolocating
   # local_housing_court
   all_matches
@@ -287,8 +289,13 @@ subquestion: |
   % if public_assistance_kinds.any_true():
   You receive these public benefits: ${public_assistance_kinds.true_values()}
   % elif household_income_qualifies:
-  Your ${income_period(hh_income.period)} income of ${currency(hh_income.amount(period_to_use=hh_income.period))} is less than 125% of the poverty level, which is
-  ${currency(household_income_limit/hh_income.period)} for a household of ${nice_number(household_size)}.
+  You said that your ${income_period(hh_income.period).lower()} income
+  is ${currency(hh_income.amount(period_to_use=hh_income.period))}.
+  
+  The limit for a household of ${nice_number(household_size)} is 125% of
+  the poverty level, or ${currency(household_income_limit/hh_income.period)}.
+  
+  You earn less than the limit.  
   % elif not can_afford:
   You told us that you can't afford to pay the fees and pay for the necessities
   of life. A judge will take a closer look at your income and expenses and decide
@@ -299,24 +306,48 @@ subquestion: |
   
   On the next screen, we'll ask you about the specific fees you want waived.
 ---
+id: eviction address
 question: |
-  Your personal information
-subquestion: |
-  Enter your name and address below.
+  What is the address you are being evicted from?
 fields:
-  - Your full name: users[0].name.first
-    #default: ${users[0]}
   - Street address: users[0].address.address
     address autocomplete: True
-  - Unit/apartment: users[0].address.unit
+  - Unit: users[0].address.unit
     required: False
   - City: users[0].address.city
   - State: users[0].address.state
     code: states_list()
-  - Zip: users[0].address.zip    
-  - Email: users[0].email
+  - Zip: users[0].address.zip 
+---
+id: contact information
+question: |
+  Contact information
+subquestion: |
+  Put at least one way for the court to reach you below.
+fields:
+  - Mobile number: users[0].mobile_number
+    required: False
+  - Other phone number: users[0].phone_number
+    required: False
+  - Email address: users[0].email    
     datatype: email
     required: False
+  - Contact notes: users[0].other_contact_method
+    input type: area
+    required: False
+    help: |
+      If you do not have a phone number or email the court can use, provide
+      specific contact instructions. For example, use a friend's phone number.
+      But the friend must be someone you can trust to tell you the court is
+      trying to reach you.
+validation code: |
+  if (not showifdef('users[0].phone_number') and \
+      (not showifdef('users[0].mobile_number')) and \
+      (not showifdef('users[0].email')) and \
+      (not showifdef('users[0].other_contact_method'))):
+    validation_error(word("You need to provide at least one contact method."))
+help: |
+  You _must_ provide contact information so the court can reach you.
 ---
 code: |
   users[0].address.geolocate()
@@ -442,7 +473,8 @@ subquestion: |
   ${action_button_html(url_action('review_all_sections'), icon='edit', label=word("Make Changes"), size="sm")}
   
 ---
-event: review_all_sections
+continue button field: review_all_sections
+continue button label: ${word("Resume")}
 question: |
   Review your form
 subquestion: |
@@ -657,15 +689,6 @@ code: |
       send_email(to=email_recipient_list, template=email_affidavit, attachments=affidavitofindigency, task="send email")
   sent_email = True
 ---
-template: email_affidavit
-subject: |
-  Signed Affidavit of Indigency for ${users[0]}
-content: |
-  ${users[0]} completed and signed the attached affidavit of indigency
-  for ${court} on ${today()}.
-  
-  You can review their answers here ${interview_url()}
----
 id: docket number
 question: |
   Docket Number
@@ -689,4 +712,30 @@ validation code: |
   if dont_know_docket_number:
     docket_numbers[0] = ' '
   docket_numbers.there_is_another = False
+---
+id: user role
+question: |
+  Did you file the first forms in this case, or are you responding to a case
+  that someone else started?
+#fields: 
+#  - no label: user_ask_role
+#    datatype: radio
+#    choices:
+#      - I am starting a new case: plaintiff
+#      - I am responding to a case started by someone else: defendant  
+field: user_ask_role
+buttons:
+  - Starting a new case: plaintiff
+  - Responding to a case: defendant
+help:
+  label: |
+    How do I know?
+  content: |
+    We need to know if you are the "Plaintiff" or the "Defendant" in your
+    case.
+    
+    If you are the first person to file a form in the case, you are the
+    "Plaintiff" or the "Petitioner."
   
+    If you are responding to a case or court papers someone else filed, you are
+    the "Defendant" or the "Respondent."
