@@ -22,10 +22,12 @@ code: |
 ---
 reconsider: True
 code: |
-  household_income_limit = (poverty_base + ((household_size) + 1 * poverty_increment)) * poverty_multiplier
+  additional_income_allowed = household_size * poverty_increment
+  household_income_limit = (poverty_base + additional_income_allowed) * poverty_multiplier
 
   household_income_qualifies = int((household_income_limit)/12) >=  int(household_monthly_income)
 ---
+reconsider: True
 code: |
   household_size = household_additional_size + 1 if has_household_members else 1
 ---
@@ -289,13 +291,13 @@ subquestion: |
   % if public_assistance_kinds.any_true():
   You receive these public benefits: ${public_assistance_kinds.true_values()}
   % elif household_income_qualifies:
+  **You earn less than the income limit.**
+
   You said that your ${income_period(hh_income.period).lower()} income
   is ${currency(hh_income.amount(period_to_use=hh_income.period))}.
   
   The limit for a household of ${nice_number(household_size)} is 125% of
   the poverty level, or ${currency(household_income_limit/hh_income.period)}.
-  
-  You earn less than the limit.  
   % elif not can_afford:
   You told us that you can't afford to pay the fees and pay for the necessities
   of life. A judge will take a closer look at your income and expenses and decide
@@ -308,7 +310,9 @@ subquestion: |
 ---
 id: eviction address
 question: |
-  What is the address you are being evicted from?
+  What is your address?
+subquestion: |
+  List the address where you want the court to mail you.
 fields:
   - Street address: users[0].address.address
     address autocomplete: True
@@ -673,21 +677,6 @@ attachment:
       # - "substitution": No
       # - "substitution_description": something
       - "date_signed": ${format_date(today())}
-
----
-code: |
-  if url_args.get('advocate_email'):
-    email_recipient_list = [url_args.get('advocate_email'), recipient_email]
-  else:
-    email_recipient_list = email_recipient
----
-code: |
-  if task_not_yet_performed("send email"):
-    if defined('users[0].email'):
-      send_email(to=email_recipient, cc=users[0], template=email_affidavit, attachments=affidavitofindigency, task="send email")
-    else:
-      send_email(to=email_recipient_list, template=email_affidavit, attachments=affidavitofindigency, task="send email")
-  sent_email = True
 ---
 id: docket number
 question: |
