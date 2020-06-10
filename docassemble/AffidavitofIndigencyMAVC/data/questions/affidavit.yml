@@ -12,28 +12,6 @@ objects:
 #  - court: MACourt
 #  - macourts: MACourtList.using(courts=['housing_courts','bmc','district_courts','superior_courts', 'land_court','juvenile_courts','probate_and_family_courts'])
 ---
-comment: |
-  MA Court Poverty Level
-code: |
-  poverty_level_update = "2020"
-  poverty_base = 12760
-  poverty_increment = 4480
-  poverty_multiplier = 1.25 # threshold multiplier. e.g. 2 for 200%
----
-reconsider: True
-code: |
-  additional_income_allowed = household_size * poverty_increment
-  household_income_limit = (poverty_base + additional_income_allowed) * poverty_multiplier
-
-  household_income_qualifies = int((household_income_limit)/12) >=  int(household_monthly_income)
----
-reconsider: True
-code: |
-  household_size = household_additional_size + 1 if has_household_members else 1
----
-code: |
-  household_monthly_income = hh_income.amount(period_to_use=12)
----
 id: question order
 mandatory: True
 code: |
@@ -73,6 +51,43 @@ code: |
   
   basic_questions_signature_flow  
   download
+---
+question: |
+  Get help with court costs and fees
+subquestion: |
+  This short interview will help you fill out an "Affidavit
+  of Indigency." This form tells the court that you cannot
+  pay court fees.
+  
+  In some cases the waiver is automatic. In other cases
+  we may need to ask you for detailed information about your
+  income and expenses.
+  
+  This form and all of your answers on it will be kept confidential
+  (private). Only court staff will be able to see your completed form.
+continue button field: intro
+---
+comment: |
+  MA Court Poverty Level
+code: |
+  poverty_level_update = "2020"
+  poverty_base = 12760
+  poverty_increment = 4480
+  poverty_multiplier = 1.25 # threshold multiplier. e.g. 2 for 200%
+---
+reconsider: True
+code: |
+  additional_income_allowed = household_size * poverty_increment
+  household_income_limit = (poverty_base + additional_income_allowed) * poverty_multiplier
+
+  household_income_qualifies = int((household_income_limit)/12) >=  int(household_monthly_income)
+---
+reconsider: True
+code: |
+  household_size = household_additional_size + 1 if has_household_members else 1
+---
+code: |
+  household_monthly_income = hh_income.amount(period_to_use=12)
 ---
 question: |
   Is anyone else on your side of this case?
@@ -144,18 +159,6 @@ code: |
   set_empty_income = True
 ---
 question: |
-  Get help with court costs and fees
-subquestion: |
-  This short interview will help you fill out an "Affidavit
-  of Indigency." This form tells the court that you cannot
-  pay court fees.
-  
-  In some cases the waiver is automatic. In other cases
-  we may need to ask you for detailed information about your
-  income and expenses.
-continue button field: intro
----
-question: |
   Do you get any of these benefits?
 subquestion: |  
   Check any that apply
@@ -212,7 +215,7 @@ question: |
   What fees do you want to have waived?
 subquestion: |
   This question is about fees paid to the court. On the next 
-  screen you'll have a chance to ask the court to pay for special costs,
+  screen you will have a chance to ask the court to pay for special costs,
   such as transcripts, tapes, expert witnesses, etc. that may be paid to a company
   or individual.
   
@@ -517,7 +520,7 @@ question: |
   Preview of your document
 subquestion: |
   Click below to open a preview of your document in a new
-  window. On the next screen, you'll have a chance to sign it.
+  window. On the next screen, you will have a chance to sign it.
 
   ${affidavitofindigency_preview}
 
