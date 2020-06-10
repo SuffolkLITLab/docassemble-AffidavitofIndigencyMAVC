@@ -125,10 +125,10 @@ subquestion: |
 continue button field: explain_separate_affidavits
 ---
 code: |
-  if str(plaintiffs) and str(defendants):
-    case_name = str(plaintiffs) + ' v ' + str(defendants)
+  if len(other_parties):
+    case_name = str(plaintiffs) + ' v. ' + str(defendants)
   else:
-    case_name = ''
+    case_name = "In re " + str(users)
 ---
 code: |
   all_matches = macourts.matching_courts(users[0].address, court_types=allowed_courts)
