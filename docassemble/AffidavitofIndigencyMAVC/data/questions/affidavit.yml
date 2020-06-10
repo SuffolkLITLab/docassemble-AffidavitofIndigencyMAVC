@@ -41,6 +41,10 @@ code: |
   basic_questions_intro_screen
   intro
   user_ask_role
+  users.gather()
+  if len(users) > 1:
+    explain_separate_affidavits
+  other_parties.gather()
   case_name
   public_assistance_kinds
   if not public_assistance_kinds.any_true():
@@ -59,7 +63,7 @@ code: |
   # local_housing_court
   all_matches
   filtered
-  courts[0]
+  str(courts[0])
   dont_know_docket_number
   set_empty_fees
   # trigger other computed values
@@ -70,8 +74,46 @@ code: |
   basic_questions_signature_flow  
   download
 ---
+question: |
+  Is anyone else on your side of this case?
+subquestion: |
+  % if len(users.elements) > 1:
+  You have already told us about ${comma_and_list(users.complete_elements())}.
+  % else:
+  
+  We need the name of each person who is part of this case so that
+  the court clerk can waive fees for the right file.
+  
+  We will ask for the name of each person on the "other side"
+  next.
+  % endif
+yesno: users.there_is_another 
+---
+id: other users names
+question: |
+  What is the name of the ${ ordinal(i) } person on your side of the case?
+fields:
+  - First Name: users[i].name.first
+  - Middle Name: users[i].name.middle
+    required: False
+  - Last Name: users[i].name.last
+    required: False
+  - Suffix: users[i].name.suffix
+    required: False
+---
+question: |
+  ${comma_and_list([user for user in users if str(user) != str(users[0])] )}
+  will need to file their own affidavit(s)
+subquestion: |
+  Each person who is part of a case needs to file their own "affidavit
+  of indigency" if they are unable to pay court costs.
+continue button field: explain_separate_affidavits
+---
 code: |
-  case_name = str(plaintiffs) + ' v ' + str(defendants)
+  if str(plaintiffs) and str(defendants):
+    case_name = str(plaintiffs) + ' v ' + str(defendants)
+  else:
+    case_name = ''
 ---
 code: |
   all_matches = macourts.matching_courts(users[0].address, court_types=allowed_courts)
@@ -138,10 +180,11 @@ fields:
   - How many people, other than yourself? : household_additional_size
     datatype: integer
     show if: has_household_members
-  - What is the total (gross) income for your household?: hh_income.value
+  - What is the total (after tax) income for your household?: hh_income.value
     datatype: currency
     help: |
-      Put in the amount you earn before taxes and deductions.
+      Put in the amount you earn after taxes. This is
+      also called your "net" income.
   - How often do you earn that amount?: hh_income.period
     code: period_list()
     datatype: integer
@@ -239,8 +282,9 @@ fields:
     datatype: currency
     required: False
     show if:  fees['Depositions'].waive    
-  - Describe the need for depositions:  fees['Depositions'].description
+  - Who do you want to take a deposition of?:  fees['Depositions'].description
     datatype: area
+    rows: 2
     show if:  fees['Depositions'].waive    
   - CD or cassette recordings of trial or hearing: fees['recordings'].waive
     datatype: yesno
@@ -381,6 +425,9 @@ fields:
     disable others: True
     object labeler: |
       lambda y: '**' + str(y) +' (' + y.address.city + ')**' + '[BR]' + y.address.on_one_line() + '[BR]' + y.description
+    show if: 
+      code: |
+        len(all_matches)      
   - note: |
       Does the list above look wrong? If you think you should file in a
       court we didn't list, choose from the full list below.
@@ -602,7 +649,7 @@ attachment:
       - "fee_expert_description": ${showifdef("fees['Costs of an expert witness'].description")}
       - "fee_deposition": ${yesno(fees['Depositions'].waive)}
       - "fee_deposition_amount": ${currency(fees['Depositions'].amount) if (fees['Depositions'].waive and defined("fees['Depositions'].amount")) else ''}
-      - "fee_deposition_description": ${showifdef("fees['Costs of an expert witness'].description")}
+      - "fee_deposition_description": ${showifdef("fees['Depositions'].description")}
       - "fee_recording": ${yesno(fees['recordings'].waive)}
       - "fee_appeal_bond": ${yesno(fees['Appeal bond'].waive)}
       - "fee_transcript": ${yesno(fees['transcript'].waive)}
@@ -665,7 +712,7 @@ attachment:
       - "fee_expert_description": ${showifdef("fees['Costs of an expert witness'].description")}
       - "fee_deposition": ${yesno(fees['Depositions'].waive)}
       - "fee_deposition_amount": ${currency(fees['Depositions'].amount) if (fees['Depositions'].waive and defined("fees['Depositions'].amount")) else ''}
-      - "fee_deposition_description": ${showifdef("fees['Costs of an expert witness'].description")}
+      - "fee_deposition_description": ${showifdef("fees['Depositions'].description")}
       - "fee_recording": ${yesno(fees['recordings'].waive)}
       - "fee_appeal_bond": ${yesno(fees['Appeal bond'].waive)}
       - "fee_transcript": ${yesno(fees['transcript'].waive)}
