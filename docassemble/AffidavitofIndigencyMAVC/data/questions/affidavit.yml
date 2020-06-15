@@ -1,6 +1,7 @@
 ---
 include:
   - docassemble.MAVirtualCourt:basic-questions.yml
+  - docassemble.MAPovertyScale:poverty.yml
 ---
 modules:
   - docassemble.income.income
@@ -31,7 +32,7 @@ code: |
       if can_afford:
         doesnt_qualify
   qualify_interstitial
-  fees['E-filing'].waive
+  fees['Filing fee'].waive
   fees['Costs of an expert witness'].waive
   fees_interstitial
   users[0].name.first
@@ -45,7 +46,7 @@ code: |
   dont_know_docket_number
   set_empty_fees
   # trigger other computed values
-  filing_fees_amount
+  # filing_fees_amount
   annually
   preview
   
@@ -66,14 +67,6 @@ subquestion: |
   This form and all of your answers on it will be kept confidential
   (private). Only court staff will be able to see your completed form.
 continue button field: intro
----
-comment: |
-  MA Court Poverty Level
-code: |
-  poverty_level_update = "2020"
-  poverty_base = 12760
-  poverty_increment = 4480
-  poverty_multiplier = 1.25 # threshold multiplier. e.g. 2 for 200%
 ---
 reconsider: True
 code: |
@@ -219,19 +212,21 @@ subquestion: |
   such as transcripts, tapes, expert witnesses, etc. that may be paid to a company
   or individual.
   
-  If you're not sure yet, you can file another affidavit later.  
+  If you're not sure yet, you can file another affidavit later.
 fields:
-  - Electronic filing fee (about $6/document): fees['E-filing'].waive
-    datatype: yesno
-    default: True
-    help: |
-      We've checked this by default because it applies in every case.
+  # - Electronic filing fee (about $6/document): fees['E-filing'].waive
+  #   datatype: yesno
+  #   default: True
+  #   help: |
+  #     We've checked this by default because it applies in every case.
   - Other filing fee: fees['Filing fee'].waive
     datatype: yesno
+
   - Amount (if known): fees['Filing fee'].amount
     datatype: currency
     required: False
     show if: fees['Filing fee'].waive
+    hint: E-filing fee is about $6.70
   - Fee for filing appeal: fees['Appeal cost'].waive
     datatype: yesno
   - Amount (if known): fees['Appeal cost'].amount
@@ -259,9 +254,9 @@ fields:
   - Describe the other fee/cost:  fees['Other'].description
     datatype: area
     show if:  fees['Other'].waive    
----
-code: |
-  fees['E-filing'].amount = 6.70
+# ---
+# code: |
+#   fees['E-filing'].amount = 6.70
 ---
 question: |
   Are you asking the court to pay any other costs to help with your case?
@@ -295,6 +290,7 @@ fields:
     datatype: yesno
   - Amount (if known): fees['transcript'].amount    
     datatype: currency
+    required: False
     show if: fees['transcript'].waive
   - Other special fees or costs: fees['Other cost'].waive    
     datatype: yesno
@@ -321,12 +317,10 @@ subquestion: |
   % endif
   % endfor
 
-  ${action_button_html(url_action("fees['E-filing'].waive"))}
+  ${action_button_html(url_action("fees['Filing fee'].waive"))}
   
   On the next screens, you will provide your name, address, and signature.
   
-  Optionally, you can email this form to an advocate who may help you file it
-  with the court.
 continue button field: fees_interstitial
 ---
 continue button field: qualify_interstitial
@@ -538,7 +532,7 @@ subquestion: |
 
   % endif
 
-  * [Edit "standard" waiver requests](${url_action("fees['E-filing'].waive")})
+  * [Edit "standard" waiver requests](${url_action("fees['Filing fee'].waive")})
   * [Edit "extra fees and costs"](${url_action("fees['transcript'].amount")})
   * [Edit name](${url_action("users[0].name.first")})
   * [Edit public benefits](${url_action("public_assistance_kinds")})
@@ -603,7 +597,8 @@ code: |
   annually = 'Yes' if need_income and hh_income.period == 1 else 'No'     
 ---
 code: |
-  filing_fees_amount = fees['E-filing'].amount + fees['Filing fee'].amount if defined("fees['Filing fee'].amount") and fees['Filing fee'].waive else fees['E-filing'].amount
+  # filing_fees_amount = fees['E-filing'].amount + fees['Filing fee'].amount if defined("fees['Filing fee'].amount") and fees['Filing fee'].waive else fees['E-filing'].amount
+  filing_fees_amount = fees['Filing fee'].amount
 ---
 reconsider: True
 attachment:
@@ -634,35 +629,28 @@ attachment:
       - "household_size": ${household_size if need_income else ''}
       - "other_income": ${'Included above' if need_income else ''}
       - "unable_to_pay": ${noyes(can_afford) if (need_income and not household_income_qualifies) else 'No'}
-      - "fee_filing": "Yes"
-      - "fee_filing_amount": ${currency(filing_fees_amount)}
+      - "fee_filing": ${fees['Filing fee'].waive}
+      - "fee_filing_amount": ${currency(fees['Filing fee'].amount) if fees['Filing fee'].amount else ''}
       - "fee_appeal": ${yesno(fees['Appeal cost'].waive)}
-      - "fee_appeal_amount": ${currency(fees['Appeal cost'].amount) if fees['Appeal cost'].waive and defined("fees['Appeal cost'].amount") else ''}
+      - "fee_appeal_amount": ${currency(fees['Appeal cost'].amount) if fees['Appeal cost'].waive and fees['Appeal cost'].amount else ''}
       - "fee_service": ${yesno(fees['Service'].waive)}
-      - "fee_service_amount": ${currency(fees['Service'].amount) if fees['Service'].waive and defined("fees['Service'].amount") else ""}
+      - "fee_service_amount": ${currency(fees['Service'].amount) if fees['Service'].waive and fees['Service'].amount else ""}
       - "fee_other": ${yesno(fees['Other'].waive)}
-      - "fee_other_amount": ${currency(fees['Other'].amount) if fees['Other'].waive and defined("fees['Other'].waive") else ""}      
+      - "fee_other_amount": ${currency(fees['Other'].amount) if fees['Other'].waive and fees['Other'].amount else ""}      
       - "fee_other_description": ${showifdef("fees['Other'].description")}
-      # - "fee_other_description_more": ''
-      # - "fee_substitution": No
-      # - "fee_substitution_description": something
-      # - "fee_substitution_description_more": something
       - "fee_expert": ${yesno(fees['Costs of an expert witness'])}
-      - "fee_expert_amount": ${currency(fees['Costs of an expert witness'].amount) if (fees['Costs of an expert witness'] and defined("fees['Costs of an expert witness'].amount")) else ''}
+      - "fee_expert_amount": ${currency(fees['Costs of an expert witness'].amount) if (fees['Costs of an expert witness'] and fees['Costs of an expert witness'].amount) else ''}
       - "fee_expert_description": ${showifdef("fees['Costs of an expert witness'].description")}
       - "fee_deposition": ${yesno(fees['Depositions'].waive)}
-      - "fee_deposition_amount": ${currency(fees['Depositions'].amount) if (fees['Depositions'].waive and defined("fees['Depositions'].amount")) else ''}
+      - "fee_deposition_amount": ${currency(fees['Depositions'].amount) if (fees['Depositions'].waive and fees['Depositions'].amount) else ''}
       - "fee_deposition_description": ${showifdef("fees['Depositions'].description")}
       - "fee_recording": ${yesno(fees['recordings'].waive)}
       - "fee_appeal_bond": ${yesno(fees['Appeal bond'].waive)}
       - "fee_transcript": ${yesno(fees['transcript'].waive)}
-      - "fee_transcript_amount": ${currency(fees['transcript'].amount) if (fees['transcript'].waive and defined("fees['transcript'].amount")) else ''}
+      - "fee_transcript_amount": ${currency(fees['transcript'].amount) if (fees['transcript'].waive and fees['transcript'].amount) else ''}
       - "cost_other": ${yesno(fees['Other cost'].waive)}
       - "cost_other_description": ${showifdef("fees['Other cost'].description")}
-      - "cost_other_amount": ${currency(fees['Other cost'].amount) if defined("fees['Other cost'].amount") and fees['Other cost'].waive else ''}
-      # - "cost_other_description_more": fees['Other cost'].waive
-      # - "substitution": No
-      # - "substitution_description": something
+      - "cost_other_amount": ${currency(fees['Other cost'].amount) if fees['Other cost'].waive and fees['Other cost'].amount  else ''}
       - "user_signature": |
           ${ users[0].signature }
       - "date_signed": ${format_date(today())}
@@ -697,35 +685,28 @@ attachment:
       - "household_size": ${household_size if need_income else ''}
       - "other_income": ${'Included above' if need_income else ''}
       - "unable_to_pay": ${noyes(can_afford) if (need_income and not household_income_qualifies) else 'No'}
-      - "fee_filing": "Yes"
-      - "fee_filing_amount": ${currency(filing_fees_amount)}
+      - "fee_filing": ${fees['Filing fee'].waive}
+      - "fee_filing_amount": ${currency(fees['Filing fee'].amount) if fees['Filing fee'].amount else ''}
       - "fee_appeal": ${yesno(fees['Appeal cost'].waive)}
-      - "fee_appeal_amount": ${currency(fees['Appeal cost'].amount) if fees['Appeal cost'].waive and defined("fees['Appeal cost'].amount") else ''}
+      - "fee_appeal_amount": ${currency(fees['Appeal cost'].amount) if fees['Appeal cost'].waive and fees['Appeal cost'].amount else ''}
       - "fee_service": ${yesno(fees['Service'].waive)}
-      - "fee_service_amount": ${currency(fees['Service'].amount) if fees['Service'].waive and defined("fees['Service'].amount") else ""}
+      - "fee_service_amount": ${currency(fees['Service'].amount) if fees['Service'].waive and fees['Service'].amount else ""}
       - "fee_other": ${yesno(fees['Other'].waive)}
-      - "fee_other_amount": ${currency(fees['Other'].amount) if fees['Other'].waive and defined("fees['Other'].waive") else ""}      
+      - "fee_other_amount": ${currency(fees['Other'].amount) if fees['Other'].waive and fees['Other'].amount else ""}      
       - "fee_other_description": ${showifdef("fees['Other'].description")}
-      # - "fee_other_description_more": ''
-      # - "fee_substitution": No
-      # - "fee_substitution_description": something
-      # - "fee_substitution_description_more": something
       - "fee_expert": ${yesno(fees['Costs of an expert witness'])}
-      - "fee_expert_amount": ${currency(fees['Costs of an expert witness'].amount) if (fees['Costs of an expert witness'] and defined("fees['Costs of an expert witness'].amount")) else ''}
+      - "fee_expert_amount": ${currency(fees['Costs of an expert witness'].amount) if (fees['Costs of an expert witness'] and fees['Costs of an expert witness'].amount) else ''}
       - "fee_expert_description": ${showifdef("fees['Costs of an expert witness'].description")}
       - "fee_deposition": ${yesno(fees['Depositions'].waive)}
-      - "fee_deposition_amount": ${currency(fees['Depositions'].amount) if (fees['Depositions'].waive and defined("fees['Depositions'].amount")) else ''}
+      - "fee_deposition_amount": ${currency(fees['Depositions'].amount) if (fees['Depositions'].waive and fees['Depositions'].amount) else ''}
       - "fee_deposition_description": ${showifdef("fees['Depositions'].description")}
       - "fee_recording": ${yesno(fees['recordings'].waive)}
       - "fee_appeal_bond": ${yesno(fees['Appeal bond'].waive)}
       - "fee_transcript": ${yesno(fees['transcript'].waive)}
-      - "fee_transcript_amount": ${currency(fees['transcript'].amount) if (fees['transcript'].waive and defined("fees['transcript'].amount")) else ''}
+      - "fee_transcript_amount": ${currency(fees['transcript'].amount) if (fees['transcript'].waive and fees['transcript'].amount) else ''}
       - "cost_other": ${yesno(fees['Other cost'].waive)}
       - "cost_other_description": ${showifdef("fees['Other cost'].description")}
-      - "cost_other_amount": ${currency(fees['Other cost'].amount) if defined("fees['Other cost'].amount") and fees['Other cost'].waive else ''}
-      # - "cost_other_description_more": fees['Other cost'].waive
-      # - "substitution": No
-      # - "substitution_description": something
+      - "cost_other_amount": ${currency(fees['Other cost'].amount) if fees['Other cost'].waive and fees['Other cost'].amount else ''}
       - "date_signed": ${format_date(today())}
 ---
 id: docket number
