@@ -246,8 +246,11 @@ fields:
     datatype: integer
     show if: has_household_members
   - What is the total (after tax) income for your household?: hh_income.value
-    step: 1
+    # step: 1
     datatype: currency
+    validation messages:
+      number: |
+        Enter a number. Do not include commas.
     help: |
       Put in the amount you earn after taxes. This is
       also called your "net" income.
@@ -604,8 +607,7 @@ subquestion: |
 
   % endif
 
-  * [Edit "standard" waiver requests](${url_action("fees['Filing fee'].waive")})
-  * [Edit "extra fees and costs"](${url_action("fees['transcript'].amount")})
+  * [Edit fees and costs](${url_action("fees['Filing fee'].waive")})
   * [Edit name](${url_action("users[0].name.first")})
   * [Edit public benefits](${url_action("public_assistance_kinds")})
   * [Edit income](${url_action("hh_income.value")})
@@ -710,8 +712,8 @@ attachment:
       - "fee_other": ${yesno(fees['Other'].waive)}
       - "fee_other_amount": ${currency(fees['Other'].amount) if fees['Other'].waive and fees['Other'].amount else ""}      
       - "fee_other_description": ${showifdef("fees['Other'].description")}
-      - "fee_expert": ${yesno(fees['Costs of an expert witness'])}
-      - "fee_expert_amount": ${currency(fees['Costs of an expert witness'].amount) if (fees['Costs of an expert witness'] and fees['Costs of an expert witness'].amount) else ''}
+      - "fee_expert": ${yesno(fees['Costs of an expert witness'].waive)}
+      - "fee_expert_amount": ${currency(fees['Costs of an expert witness'].amount) if (fees['Costs of an expert witness'].waive and fees['Costs of an expert witness'].amount) else ''}
       - "fee_expert_description": ${showifdef("fees['Costs of an expert witness'].description")}
       - "fee_deposition": ${yesno(fees['Depositions'].waive)}
       - "fee_deposition_amount": ${currency(fees['Depositions'].amount) if (fees['Depositions'].waive and fees['Depositions'].amount) else ''}
@@ -766,8 +768,8 @@ attachment:
       - "fee_other": ${yesno(fees['Other'].waive)}
       - "fee_other_amount": ${currency(fees['Other'].amount) if fees['Other'].waive and fees['Other'].amount else ""}      
       - "fee_other_description": ${showifdef("fees['Other'].description")}
-      - "fee_expert": ${yesno(fees['Costs of an expert witness'])}
-      - "fee_expert_amount": ${currency(fees['Costs of an expert witness'].amount) if (fees['Costs of an expert witness'] and fees['Costs of an expert witness'].amount) else ''}
+      - "fee_expert": ${yesno(fees['Costs of an expert witness'].waive)}
+      - "fee_expert_amount": ${currency(fees['Costs of an expert witness'].amount) if (fees['Costs of an expert witness'].waive and fees['Costs of an expert witness'].amount) else ''}
       - "fee_expert_description": ${showifdef("fees['Costs of an expert witness'].description")}
       - "fee_deposition": ${yesno(fees['Depositions'].waive)}
       - "fee_deposition_amount": ${currency(fees['Depositions'].amount) if (fees['Depositions'].waive and fees['Depositions'].amount) else ''}
