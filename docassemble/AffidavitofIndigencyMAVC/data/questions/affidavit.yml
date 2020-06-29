@@ -83,7 +83,7 @@ code: |
   household_monthly_income = hh_income.amount(period_to_use=12)
 ---
 question: |
-  Is anyone else on your side of this case?
+  Did anyone else file with you?
 subquestion: |
   % if len(users.elements) > 1:
   You have already told us about ${comma_and_list(users.complete_elements())}.
@@ -95,6 +95,8 @@ subquestion: |
   We will ask for the name of each person on the "other side"
   next.
   % endif
+  
+  Is anyone else on your side of this case?
 yesno: users.there_is_another 
 ---
 id: other users names
@@ -105,9 +107,72 @@ fields:
   - Middle Name: users[i].name.middle
     required: False
   - Last Name: users[i].name.last
-    required: False
   - Suffix: users[i].name.suffix
     required: False
+    code: |
+      name_suffix()
+---      
+id: other users there are any
+question: |
+  % if users == plaintiffs:
+  Is there a **defendant** or respondent in this case? 
+  % else:
+  Is there a **plaintiff** or petitioner in this case?
+  % endif
+subquestion: |
+  % if users == plaintiffs:
+  Answer yes if there is a person or organization you are suing or taking to court.
+  % else:
+  You should be able to find out from the paperwork that told you to 
+  go to court.
+  
+  Answer yes if someone else has sued you or is bringing you to court.
+  % endif
+yesno: other_parties.there_are_any
+---
+id: names of opposing parties
+question: |
+  % if users==plaintiffs:
+  Please list the name of each **defendant** or respondent in this
+  case below
+  % else:
+  Please list the name of each **plaintiff** or petitioner in this case below
+  % endif
+subquestion: |
+  Click "${word("Add another")}" to add more.
+list collect: 
+  enable: True
+  label: |
+    % if users==plaintiffs:
+    Defendant/Respondent ${i+1}    
+    % else:
+    Plaintiff/Petitioner ${i+1}
+    % endif
+fields:
+  - Is this a person, or a business?: other_parties[i].person_type
+    input type: radio
+    choices:
+      - Business or organization: business
+      - Person: individual
+  - First name: other_parties[i].name.first
+    show if:
+      variable: other_parties[i].person_type
+      is: "individual"
+  - Last name: other_parties[i].name.last
+    show if:
+      variable: other_parties[i].person_type      
+      is: "individual"
+  - Suffix: other_parties[i].name.suffix
+    code: |
+      name_suffix()
+    show if:
+      variable: other_parties[i].person_type      
+      is: "individual"
+    required: False      
+  - Name of organization or business: other_parties[i].name.first
+    show if:
+      variable: other_parties[i].person_type
+      is: business
 ---
 question: |
   ${comma_and_list([user for user in users if str(user) != str(users[0])] )}
@@ -164,24 +229,30 @@ fields:
       - Emergency Aid to Elderly, Disabled or Children (EAEDC): EAEDC
       - Massachusetts Veterans Benefits Programs: VA Benefits
       - Supplemental Security Income (SSI): SSI
+    required: False
 ---
 question: |
   About your income and household
+subquestion: |
+  Tell us about **how much** and **how often** you and your
+  household are paid.
 fields:
   - Does anyone else live with you as part of your household?: has_household_members
     datatype: yesnoradio
     help: |
-      For example, count your children, spouse, or other family member you take care
-      of or who helps take care of you.
-  - How many people, other than yourself? : household_additional_size
+      For example, count your children, spouse, or other family member
+      you take care of or who helps take care of you.
+  - How many people? Don't count yourself. : household_additional_size
     datatype: integer
     show if: has_household_members
   - What is the total (after tax) income for your household?: hh_income.value
+    step: 1
     datatype: currency
     help: |
       Put in the amount you earn after taxes. This is
       also called your "net" income.
   - How often do you earn that amount?: hh_income.period
+    input type: radio
     code: period_list()
     datatype: integer
 ---
@@ -205,66 +276,29 @@ subquestion: |
   1. You must be unable to afford to pay the costs, or unable to do so without depriving you or your dependents the necessities of life, including food, shelter, and clothing. You said you are able to pay the costs.
 ---
 question: |
-  What fees do you want to have waived?
-subquestion: |
-  This question is about fees paid to the court. On the next 
-  screen you will have a chance to ask the court to pay for special costs,
-  such as transcripts, tapes, expert witnesses, etc. that may be paid to a company
-  or individual.
-  
+  What fees do you need the court to waive or pay?
+subquestion: | 
   If you're not sure yet, you can file another affidavit later.
+  
+  Check the boxes that you need below.
 fields:
   # - Electronic filing fee (about $6/document): fees['E-filing'].waive
   #   datatype: yesno
   #   default: True
   #   help: |
   #     We've checked this by default because it applies in every case.
-  - Other filing fee: fees['Filing fee'].waive
+  - Filing fee or e-filing fee: fees['Filing fee'].waive
     datatype: yesno
-
   - Amount (if known): fees['Filing fee'].amount
     datatype: currency
     required: False
-    show if: fees['Filing fee'].waive
-    hint: E-filing fee is about $6.70
-  - Fee for filing appeal: fees['Appeal cost'].waive
-    datatype: yesno
-  - Amount (if known): fees['Appeal cost'].amount
-    datatype: currency
-    required: False
-    show if: fees['Appeal cost'].waive
-  - Appeal bond: fees['Appeal bond'].waive
-    datatype: yesno
-  - Amount (if known): fees['Appeal bond'].amount
-    datatype: currency
-    required: False
-    show if: fees['Appeal bond'].waive    
+    show if: fees['Filing fee'].waive    
   - Costs of serving the other party: fees['Service'].waive
     datatype: yesno
   - Amount (if known): fees['Service'].amount
     datatype: currency
     required: False
-    show if: fees['Service'].waive
-  - Other fees or costs: fees['Other'].waive    
-    datatype: yesno
-  - Amount (if known):  fees['Other'].amount
-    datatype: currency
-    required: False
-    show if:  fees['Other'].waive    
-  - Describe the other fee/cost:  fees['Other'].description
-    datatype: area
-    show if:  fees['Other'].waive    
-# ---
-# code: |
-#   fees['E-filing'].amount = 6.70
----
-question: |
-  Are you asking the court to pay any other costs to help with your case?
-subquestion: |
-  Check the box for any other costs that you want the court to pay below.
-  
-  If you're not sure yet, you can file another affidavit later.
-fields:
+    show if: fees['Service'].waive          
   - Expert witness services, including examinations and testimony: fees['Costs of an expert witness'].waive
     datatype: yesno
   - Amount (if known):  fees['Costs of an expert witness'].amount
@@ -284,14 +318,39 @@ fields:
     datatype: area
     rows: 2
     show if:  fees['Depositions'].waive    
+  - Fee for filing appeal: fees['Appeal cost'].waive
+    datatype: yesno
+  - Amount (if known): fees['Appeal cost'].amount
+    datatype: currency
+    required: False
+    show if: fees['Appeal cost'].waive
+  - Appeal bond: fees['Appeal bond'].waive
+    datatype: yesno
+  - Amount (if known): fees['Appeal bond'].amount
+    datatype: currency
+    required: False
+    show if: fees['Appeal bond'].waive    
   - CD or cassette recordings of trial or hearing: fees['recordings'].waive
     datatype: yesno
+  - note: |
+      You do not need to tell the court the amount to waive for
+      the cost of recordings.
+    show if: fees['recordings'].waive      
   - Written transcript of trial or hearing: fees['transcript'].waive
     datatype: yesno
   - Amount (if known): fees['transcript'].amount    
     datatype: currency
     required: False
-    show if: fees['transcript'].waive
+    show if: fees['transcript'].waive        
+  - Other fee paid to the court: fees['Other'].waive    
+    datatype: yesno
+  - Amount (if known):  fees['Other'].amount
+    datatype: currency
+    required: False
+    show if:  fees['Other'].waive    
+  - Describe the other fee/cost:  fees['Other'].description
+    datatype: area
+    show if:  fees['Other'].waive    
   - Other special fees or costs: fees['Other cost'].waive    
     datatype: yesno
   - Amount (if known):  fees['Other cost'].amount
@@ -300,8 +359,13 @@ fields:
     show if:  fees['Other cost'].waive    
   - Describe the other fee/cost:  fees['Other cost'].description
     datatype: area
-    show if:  fees['Other cost'].waive    
-    
+    show if:  fees['Other cost'].waive       
+validation code: |
+  if len([fee for fee in fees if fees[fee].waive]) < 1:
+    validation_error("You need to choose at least one.", field="fees['Other cost'].waive")
+# ---
+# code: |
+#   fees['E-filing'].amount = 6.70   
 ---
 question: |
   Summary of fees
@@ -313,7 +377,7 @@ subquestion: |
   ----|-------|-------
   % for fee in fees:
   % if fees[fee].waive:
-  ${fee} | ${currency(fees[fee].amount) if hasattr(fees[fee],'amount') else '' } | ${action_button_html(url_action("fees['"+ fee + "'].waive"))}
+  ${fee} | ${currency(fees[fee].amount) if hasattr(fees[fee],'amount') and fees[fee].amount else '' } | ${action_button_html(url_action("fees['"+ fee + "'].waive"))}
   % endif
   % endfor
 
@@ -344,7 +408,7 @@ subquestion: |
   of life. A judge will take a closer look at your income and expenses and decide
   if you qualify for sure.
   
-  You also must complete a [supplemental affidavit](https://www.mass.gov/doc/supplement-to-the-affidavit-of-indigency/download). Please download, fill out, and print this on your own. It's not part of this interview yet.
+  You also must complete a [supplemental affidavit](https://www.mass.gov/doc/supplement-to-the-affidavit-of-indigency/download). Please download, fill out, and print this on your own. It's not part of this online form yet.
   % endif
   
   On the next screen, we'll ask you about the specific fees you want waived.
@@ -390,7 +454,7 @@ validation code: |
       (not showifdef('users[0].mobile_number')) and \
       (not showifdef('users[0].email')) and \
       (not showifdef('users[0].other_contact_method'))):
-    validation_error(word("You need to provide at least one contact method."))
+    validation_error(word("You need to provide at least one contact method."), field="users[0].other_contact_method")
 help: |
   You _must_ provide contact information so the court can reach you.
 ---
@@ -403,11 +467,18 @@ code: |
 ---      
 id: choose a court
 question: |
+  % if users==plaintiffs:
   Which court are you filing in?
+  % else:
+  Which court was your case filed in?
+  % endif
 subquestion: |
   % if len(all_matches) > 0:
-  Below is a list of the court(s) that serve the
-  address you gave us, ${users[0].address.on_one_line(include_unit=True)}.  
+  Below is a map of the court(s) that serve the
+  address you gave us, ${users[0].address.on_one_line(include_unit=True)}.
+  
+  ${map_of(combined_locations(all_matches))}
+  
   % else:
   We didn't find any matching court(s) that serve
   ${users[0].address.on_one_line()}.
@@ -427,7 +498,8 @@ fields:
         len(all_matches)      
   - note: |
       Does the list above look wrong? If you think you should file in a
-      court we didn't list, choose from the full list below.
+      court we didn't list, select "None of the above" and choose from the
+      full list below.
     show if: 
       code: |
         len(all_matches)
@@ -743,10 +815,24 @@ question: |
 #    choices:
 #      - I am starting a new case: plaintiff
 #      - I am responding to a case started by someone else: defendant  
-field: user_ask_role
-buttons:
-  - Starting a new case: plaintiff
-  - Responding to a case: defendant
+fields: 
+  - no label: user_ask_role
+    datatype: radio
+    choices:
+      - Starting a new case: plaintiff
+      - Responding to a case: defendant
+  - note: |
+      Okay, you are the **Plaintiff** or Petitioner in this case. The other 
+      side is the **Defendant** or Respondent.
+    show if:
+      variable: user_ask_role
+      is: "plaintiff"
+  - note: |
+      Okay, you are the **Defendant** or Respondent in this case. The other 
+      side is the **Plaintiff** or Petitioner.
+    show if:
+      variable: user_ask_role
+      is: "defendant"
 help:
   label: |
     How do I know?
