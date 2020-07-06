@@ -392,13 +392,21 @@ continue button field: fees_interstitial
 ---
 continue button field: qualify_interstitial
 question: |
-  It looks like you qualify for a fee waiver
+  % if not public_assistance_kinds.any_true() and not household_income_qualifies and not can_afford:
+  You need to submit a supplemental affidavit to learn if you qualify
+  % else:
+  Based on your answers, it looks like you qualify for a fee waiver
+  % endif
 subquestion: |
-  Based on your answers, you qualify.
-  
   % if public_assistance_kinds.any_true():
+  Based on the information you gave us so far, you should qualify for a fee
+  waiver. Learn more at [MassLegalHelp.org](https://www.masslegalhelp.org/what-if-the-clerk-does-not-approve-my-affidavit-of-indigency-right-away-).
+  
   You receive these public benefits: ${public_assistance_kinds.true_values()}
   % elif household_income_qualifies:
+  Based on the information you gave us so far, you should qualify for a fee
+  waiver. Learn more at [MassLegalHelp.org](https://www.masslegalhelp.org/what-if-the-clerk-does-not-approve-my-affidavit-of-indigency-right-away-).
+  
   **You earn less than the income limit.**
 
   You said that your ${income_period(hh_income.period).lower()} income
@@ -412,9 +420,23 @@ subquestion: |
   if you qualify for sure.
   
   You also must complete a [supplemental affidavit](https://www.mass.gov/doc/supplement-to-the-affidavit-of-indigency/download). Please download, fill out, and print this on your own. It's not part of this online form yet.
+  
+  Keep going with this online form. You can file the supplemental affidavit
+  later.
   % endif
   
   On the next screen, we'll ask you about the specific fees you want waived.
+help: |
+  If you get certain public benefits, or if you earn less than 125% of 
+  the federal poverty level, the law says that you qualify for a fee waiver.
+  If you earn more than that but still cannot afford to pay the costs
+  of going to court, you need to give the court more information. If the 
+  court agrees, they may waive your court costs. It is up to a judge to 
+  decide.
+  
+  * [What if the clerk does not approve my affidavit right away?](https://www.masslegalhelp.org/what-if-the-clerk-does-not-approve-my-affidavit-of-indigency-right-away-)
+  * [What if the clerk denies my affidavit?](https://www.masslegalhelp.org/what-if-the-clerk-denies-my-affidavit-of-indigency-)
+  
 ---
 id: eviction address
 question: |
@@ -532,7 +554,7 @@ help:
     The District Court, BMC, and Superior Court are all courts that can hear any
     type of case. The Land Court, Probate and Family, Juvenile Court, and
     Housing Court are all **specialist** courts that hear one kind of case. They
-    have may have judges with special training as well as special resources
+    may have judges with special training as well as special resources
     available.
     
     For example, the Housing Court has trained mediators, a special program for
@@ -588,7 +610,7 @@ continue button field: preview
 question: |
   Preview of your document
 subquestion: |
-  Click below to open a preview of your document in a new
+  Click the image below to open a preview of your document in a new
   window. On the next screen, you will have a chance to sign it.
 
   ${affidavitofindigency_preview}
