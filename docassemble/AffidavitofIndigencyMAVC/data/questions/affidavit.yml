@@ -53,6 +53,7 @@ code: |
   basic_questions_signature_flow  
   download
 ---
+id: intro
 question: |
   Get help with court costs and fees
 subquestion: |
@@ -82,6 +83,7 @@ code: |
 code: |
   household_monthly_income = hh_income.amount(period_to_use=12)
 ---
+id: any other users
 question: |
   Did anyone else file with you?
 subquestion: |
@@ -174,6 +176,7 @@ fields:
       variable: other_parties[i].person_type
       is: business
 ---
+id: explain separate affidavits
 question: |
   ${comma_and_list([user for user in users if str(user) != str(users[0])] )}
   will need to file their own affidavit(s)
@@ -216,6 +219,7 @@ code: |
     household_size = DAEmpty()
   set_empty_income = True
 ---
+id: user benefits
 question: |
   Do you get any of these benefits?
 subquestion: |  
@@ -231,6 +235,7 @@ fields:
       - Supplemental Security Income (SSI): SSI
     required: False
 ---
+id: user income and household size
 question: |
   About your income and household
 subquestion: |
@@ -259,6 +264,7 @@ fields:
     code: period_list()
     datatype: integer
 ---
+id: user ability to pay
 question: |
   Can you afford to pay the court costs?
 subquestion: |
@@ -267,6 +273,7 @@ subquestion: |
   or your dependents of the necessities of life, including food, shelter and clothing
 yesno: can_afford
 ---
+id: user does not qualify
 event: doesnt_qualify
 question: |
   Sorry, it looks like you don't qualify
@@ -278,6 +285,7 @@ subquestion: |
      of ${household_size}, the limit is ${currency(household_income_limit/12)} per month. However, you told us your income is ${currency(hh_income.amount(period_to_use=12))} per month.
   1. You must be unable to afford to pay the costs, or unable to do so without depriving you or your dependents the necessities of life, including food, shelter, and clothing. You said you are able to pay the costs.
 ---
+id: select fees waived
 question: |
   What fees do you need the court to waive or pay?
 subquestion: | 
@@ -370,6 +378,7 @@ validation code: |
 # code: |
 #   fees['E-filing'].amount = 6.70   
 ---
+id: summary of fees
 question: |
   Summary of fees
 subquestion: |
@@ -390,6 +399,7 @@ subquestion: |
   
 continue button field: fees_interstitial
 ---
+id: qualify on face
 continue button field: qualify_interstitial
 question: |
   % if not public_assistance_kinds.any_true() and not household_income_qualifies and not can_afford:
@@ -438,7 +448,7 @@ help: |
   * [What if the clerk denies my affidavit?](https://www.masslegalhelp.org/what-if-the-clerk-denies-my-affidavit-of-indigency-)
   
 ---
-id: eviction address
+id: user address
 question: |
   What is your address?
 subquestion: |
@@ -606,6 +616,7 @@ code: |
     have_email_in_url_args = False
     recipient_email = ""
 ---
+id: preview form
 continue button field: preview
 question: |
   Preview of your document
@@ -618,6 +629,7 @@ subquestion: |
   ${action_button_html(url_action('review_all_sections'), icon='edit', label=word("Make Changes"), size="sm")}
   
 ---
+id: review form
 continue button field: review_all_sections
 continue button label: ${word("Resume")}
 question: |
@@ -635,6 +647,7 @@ subquestion: |
   * [Edit income](${url_action("hh_income.value")})
   * [Edit inability to pay](${url_action("can_afford")})
 ---
+id: final download
 decoration: file-download
 question: |
   % if not defined('email_success') or not email_success:
