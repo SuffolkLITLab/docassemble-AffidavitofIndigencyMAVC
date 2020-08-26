@@ -13,12 +13,23 @@ objects:
 #  - court: MACourt
 #  - macourts: MACourtList.using(courts=['housing_courts','bmc','district_courts','superior_courts', 'land_court','juvenile_courts','probate_and_family_courts'])
 ---
+metadata:
+  title: Affidavit of Indigency
+---
+code: |
+  interview_short_title = "Ask the court to waive fees"
+---
 id: question order
 mandatory: True
 code: |
   multi_user = True # Allow sharing interview
   basic_questions_intro_screen
   intro
+  case_new_or_existing
+  if case_new_or_existing == "back_fees":
+    exit_cant_pay_back_fees
+  talk_to_court    
+  dont_know_docket_number 
   user_ask_role
   users.gather()
   if len(users) > 1:
@@ -43,7 +54,9 @@ code: |
   all_matches
   filtered
   str(courts[0])
-  dont_know_docket_number
+  
+  # show_court_information
+  
   set_empty_fees
   # trigger other computed values
   # filing_fees_amount
@@ -57,17 +70,112 @@ id: intro
 question: |
   Get help with court costs and fees
 subquestion: |
-  This short interview will help you fill out an "Affidavit
+  This short online form will help you fill out an "Affidavit
   of Indigency." This form tells the court that you cannot
   pay court fees.
-  
+    
   In some cases the waiver is automatic. In other cases
   we may need to ask you for detailed information about your
   income and expenses.
   
+  This form is never filed on its own. Make sure that the court
+  know what case to attach this form to. You may want to call
+  the court and talk to the clerk before you submit this form. We will
+  give you the number of the court clerk at the end of this form.
+
+  You can only use this form to ask the court to help with **new**
+  costs. The court cannot give you a refund.
+  
   This form and all of your answers on it will be kept confidential
   (private). Only court staff will be able to see your completed form.
 continue button field: intro
+help: 
+  label: |
+    What kinds of fees can the court help me with?
+  content: |
+    The court can decide not to charge you costs that you would normally
+    pay to the court.
+    
+    For example:
+    
+    * Filing fees.
+    * Costs for recordings and transcripts of court hearings.
+    
+    It can also help you pay for certain things that you would pay to
+    someone else.
+    
+    For example:
+    
+    * The cost of serving a witness or the other party.
+    * Cost of taking a deposition.
+    * An appeal bond.
+    * Cost of an expert witness.
+    
+    If you ask for something else that is important for your trial,
+    the court may be able to pay for it. But it may not.
+    
+    You cannot use this form to ask the court to pay for an
+    attorney to represent you.
+---
+id: new or existing case
+question: |
+  Is this a new case?
+subquestion: |
+  You can use this affidavit in a new case, or to waive 
+  new fees. You cannot get the court to refund court costs
+  for you with this form.
+  
+  What kind of case is this?
+fields:
+  - no label: case_new_or_existing
+    datatype: radio
+    choices:
+      - This is a **new** case: new
+      - I need help paying a new cost in an **existing** case: existing
+      - I want the court to pay me back fees in an **existing** case: back_fees
+---
+id: talk to the court
+continue button field: talk_to_court
+question: |
+  Make sure the court knows what case this is about
+subquestion: |
+  % if case_new_or_existing == "new":
+  You said this is part of a new case. This form does not start a new
+  case on its own. You still need to file that paperwork separately.
+  
+  Make sure that the cover
+  letter with your new case tells the court that you will be filing
+  an affidavit of indigency.
+  
+  If you already filed the new case paperwork without a cover letter,
+  call the clerk to explain what you are doing. We will give you the 
+  number of your court at the end of this online form.
+  % else:
+  You said that this is part of an existing case. The clerk needs to 
+  know what case you are filing in.
+  
+  Look for the docket number on any court paperwork you have. It is different
+  for each court and each kind of case. It may look a little like this: 
+  20-50SU-1234.
+  
+  If you cannot find the docket number, you may want to call the court clerk
+  before you submit this form. We will give you the clerk's phone number
+  at the end of this online form.
+  % endif
+---
+event: exit_cant_pay_back_fees
+question: |
+  This form is not right for you
+decoration: hand-paper
+subquestion: |
+  You said you want the court to pay you back money.
+
+  You can only use this form to ask the court to pay or waive fees that 
+  have not been paid yet.
+buttons:
+  - Restart: restart
+  - Exit: exit
+    url: https://massaccess.suffolklitlab.org
 ---
 reconsider: True
 code: |
@@ -374,9 +482,6 @@ fields:
 validation code: |
   if len([fee for fee in fees if fees[fee].waive]) < 1:
     validation_error("You need to choose at least one.", field="fees['Other cost'].waive")
-# ---
-# code: |
-#   fees['E-filing'].amount = 6.70   
 ---
 id: summary of fees
 question: |
@@ -496,9 +601,6 @@ help: |
 code: |
   users[0].address.geolocate()
   tried_geolocating = True
-# ---
-# code: |
-#   local_housing_court = macourts.matching_housing_court(client.address)
 ---      
 id: choose a court
 question: |
@@ -587,20 +689,15 @@ help:
     
     You can also view the court selection guidance at
     [mass.gov](https://www.mass.gov/courthouse-locator).
-
-# ---
-# question: |
-#   Your court and case number
-# subquestion: |
-#   We have tried to guess  the name of your court based on your address.
-#   Look closely to make sure this is the right court name.
-# fields:
-#   - What court is your case being heard in?: court
-#     datatype: object
-#     default: local_housing_court
-#     choices: macourts
-#   - Docket number or case number (if known): docket_number
-#     required: False
+---
+id: show_court_information
+continue button field: show_court_information
+question: |
+  If you need to, call the court
+subquestion: |
+  The clerk for the ${courts[0]} can be called at:
+  
+  ${ courts[0].phone }
 ---
 code: |
   if url_args.get('recipient_email'):
@@ -663,6 +760,7 @@ subquestion: |
   1. Click the preview image below to open the form in a new window. Correct any errors using the "Make changes" button below.
   1. Download and save or print a copy of this form for your 
   records.
+  1. If you need to call the court, you can call ${courts[0]} at ${courts[0].phone}.
   1. Click the "Submit to ${courts[0]}" button to send it to the court. 
   1. You will have a chance to add instructions to the clerk and see the cover page before final delivery.
   % else:
@@ -719,7 +817,7 @@ attachment:
     skip undefined: True
     fields:
       - "court": ${courts[0]}
-      - "docket_number": ${case_name + ' ' + docket_numbers[0]}
+      - "docket_number": ${case_name + ' ' + str(docket_numbers[0])}
       - "user_name_full": ${users[0]}
       - "user_address_on_one_line": ${users[0].address.on_one_line()}
       - "gets_public_benefits": ${yesno(public_assistance_kinds.any_true())}
@@ -827,7 +925,12 @@ fields:
   - I do not know the docket number: dont_know_docket_number
     datatype: yesno
   - Docket number: docket_numbers[0]
-    hide if:  dont_know_docket_number
+    show if:  
+      variable: dont_know_docket_number
+      is: False
+  - What case do you want fees waived for? Briefly explain how the clerk can find your case.: docket_numbers[0]
+    show if: dont_know_docket_number
+    maxlength: 25
 help:
   label: |
     What's a docket number?
@@ -837,9 +940,6 @@ help:
     If this is a **new** case, you may not have one yet. You can leave
     this blank if you're not sure.
 validation code: |
-  # docket_numbers.there_are_any = not dont_know_docket_number
-  if dont_know_docket_number:
-    docket_numbers[0] = ' '
   docket_numbers.there_is_another = False
 ---
 id: user role
