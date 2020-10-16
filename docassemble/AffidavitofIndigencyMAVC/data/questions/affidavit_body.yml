@@ -724,10 +724,13 @@ code: |
   # filing_fees_amount = fees['E-filing'].amount + fees['Filing fee'].amount if defined("fees['Filing fee'].amount") and fees['Filing fee'].waive else fees['E-filing'].amount
   filing_fees_amount = fees['Filing fee'].amount
 ---
+code: |
+  form_to_file_no_cover = affidavitofindigency_attachment
+---
 reconsider: True
 attachment:
-  - name: affidavitofindigency
-    variable name: form_to_file_no_cover
+  - name: Affidavit of Indigency
+    variable name: affidavitofindigency_attachment
     filename: affidavitofindigency
     pdf template file: affidavitofindigency.pdf
     editable: False
