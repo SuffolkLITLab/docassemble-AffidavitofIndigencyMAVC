@@ -59,6 +59,9 @@ code: |
   annually
   ask_affidavit_questions = True
 ---
+code: |
+  is_indigent = public_assistance_kinds.any_true() or household_income_qualifies or not can_afford
+---
 id: intro
 question: |
   Get help with court costs and fees

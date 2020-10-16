@@ -43,9 +43,9 @@ def find_package_data(where='.', package='', exclude=standard_exclude, exclude_d
     return out
 
 setup(name='docassemble.AffidavitofIndigencyMAVC',
-      version='0.0.14',
+      version='0.0.15',
       description=('A docassemble extension.'),
-      long_description='# docassemble.AffidavitofIndigencyMAVC\r\n\r\nA docassemble extension.\r\n\r\n## Author\r\n\r\nSystem Administrator, admin@admin.com\r\n\r\n',
+      long_description='# Affidavit of Indigency Package\r\n\r\nCan be included separately in an interview.\r\n\r\n1. affidavit.yml runs the whole interview\r\n1. affidavit_body.yml contains all questions and logic\r\n\r\naffidvitofindigency_attachment is the variable that represents the final document.\r\n\r\nis_indigent tells you if the litigant was allowed to complete the affidavit\r\n\r\n',
       long_description_content_type='text/markdown',
       author='System Administrator',
       author_email='admin@admin.com',
