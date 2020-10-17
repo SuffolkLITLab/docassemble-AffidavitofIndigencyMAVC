@@ -36,27 +36,27 @@ code: |
   if not public_assistance_kinds.any_true():
     has_household_members
     if not household_income_qualifies:
-      if can_afford:
-        doesnt_qualify
-  qualify_interstitial
-  fees['Filing fee'].waive
-  fees['Costs of an expert witness'].waive
-  fees_interstitial
-  users[0].name.first
-  users[0].address.address
-  users[0].mobile_number
-  tried_geolocating
-  # local_housing_court
-  all_matches
-  filtered
-  str(courts[0])
-  
-  # show_court_information
-  
-  set_empty_fees
-  # trigger other computed values
-  # filing_fees_amount
-  annually
+      can_afford
+  if is_indigent:      
+    qualify_interstitial
+    fees['Filing fee'].waive
+    fees['Costs of an expert witness'].waive
+    fees_interstitial
+    users[0].name.first
+    users[0].address.address
+    users[0].mobile_number
+    tried_geolocating
+    # local_housing_court
+    all_matches
+    filtered
+    str(courts[0])
+
+    # show_court_information
+
+    set_empty_fees
+    # trigger other computed values
+    # filing_fees_amount
+    annually
   ask_affidavit_questions = True
 ---
 code: |
@@ -379,9 +379,23 @@ subquestion: |
 yesno: can_afford
 ---
 id: user does not qualify
-event: doesnt_qualify
+event: doesnt_qualify_ending
 question: |
   Sorry, it looks like you don't qualify
+decoration: hand-paper  
+subquestion: |
+  To qualify for a waiver of court costs, you must meet one of these:
+  
+  1. You receive public assistance
+  1. Your income is below 125% of the Federal Poverty Level. For your household
+     of ${household_size}, the limit is ${currency(household_income_limit/12)} per month. However, you told us your income is ${currency(hh_income.amount(period_to_use=12))} per month.
+  1. You must be unable to afford to pay the costs, or unable to do so without depriving you or your dependents the necessities of life, including food, shelter, and clothing. You said you are able to pay the costs.
+---
+---
+id: user does not qualify
+continue button field: doesnt_qualify_interstitial
+question: |
+  Sorry, it looks like you don't qualify for a fee waiver
 subquestion: |
   To qualify for a waiver of court costs, you must meet one of these:
   
