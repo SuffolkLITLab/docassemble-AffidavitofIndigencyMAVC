@@ -53,7 +53,7 @@ setup(name='docassemble.AffidavitofIndigencyMAVC',
       url='https://docassemble.org',
       packages=find_packages(),
       namespace_packages=['docassemble'],
-      install_requires=['docassemble.MACourts', 'docassemble.MAVirtualCourt', 'docassemble.assemblylinewizard', 'docassemble.income'],
+      install_requires=['docassemble.MACourts', 'docassemble.MAVirtualCourt', 'docassemble.assemblylinewizard', 'docassemble.income', 'docassemble.MAPovertyScale'],
       zip_safe=False,
       package_data=find_package_data(where='docassemble/AffidavitofIndigencyMAVC/', package='docassemble.AffidavitofIndigencyMAVC'),
      )
